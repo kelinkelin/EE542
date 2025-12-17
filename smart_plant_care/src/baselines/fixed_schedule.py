@@ -1,6 +1,6 @@
 """
-固定时间表基线策略
-每天固定时间浇水和开灯（非智能）
+Fixed Schedule Baseline Policy
+Water and light at fixed times daily (non-intelligent)
 """
 
 import numpy as np
@@ -15,13 +15,13 @@ import yaml
 
 class FixedSchedulePolicy:
     """
-    固定时间表策略
-    - 每天8点和20点浇水50ml
-    - 灯光6点开，22点关
+    Fixed Schedule Policy
+    - Water 50ml at 8am and 8pm daily
+    - Lamp on at 6am, off at 10pm
     """
     
     def __init__(self, config_path: str = "config.yaml"):
-        """初始化固定时间表"""
+        """Initialize fixed schedule"""
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
         
@@ -31,7 +31,7 @@ class FixedSchedulePolicy:
     
     def get_action(self, observation: np.ndarray) -> np.ndarray:
         """
-        根据固定时间表决定动作
+        Decide action based on fixed schedule
         
         Args:
             observation: [soil_moisture, temperature, light_level, hour_of_day, plant_health, hours_since_water]
@@ -41,10 +41,10 @@ class FixedSchedulePolicy:
         """
         hour = int(observation[3])
         
-        # 判断是否浇水
+        # Determine watering
         water_amount = self.water_amount if hour in self.water_times else 0.0
         
-        # 判断是否开灯
+        # Determine lamp status
         lamp_start, lamp_end = self.lamp_schedule
         lamp_on = 1.0 if lamp_start <= hour < lamp_end else 0.0
         
@@ -58,10 +58,10 @@ def evaluate_policy(
     seed: int = 42
 ) -> Dict:
     """
-    评估策略性能
+    Evaluate policy performance
     
     Returns:
-        metrics: 包含平均健康度、用水量、能耗等指标的字典
+        metrics: Dictionary containing avg health, water usage, energy, etc.
     """
     results = {
         'avg_health': [],
@@ -81,14 +81,14 @@ def evaluate_policy(
             action = policy.get_action(obs)
             obs, reward, terminated, truncated, info = env.step(action)
         
-        # 记录指标
+        # Record metrics
         avg_health = info['avg_health']
         final_health = obs[4]  # plant_health
         total_water = info['total_water_used']
         total_energy = info['total_energy_used']
         violations = info['total_violations']
         
-        # 效率 = 健康增益 / (用水 + λ·能耗)
+        # Efficiency = health gain / (water + λ·energy)
         efficiency = avg_health / (total_water + 0.001 * total_energy + 1e-6)
         
         results['avg_health'].append(avg_health)
@@ -103,7 +103,7 @@ def evaluate_policy(
               f"Water={total_water:.1f}ml, "
               f"Violations={violations}")
     
-    # 计算统计量
+    # Calculate statistics
     summary = {
         'avg_health_mean': np.mean(results['avg_health']),
         'avg_health_std': np.std(results['avg_health']),
@@ -119,35 +119,34 @@ def evaluate_policy(
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("固定时间表基线策略评估")
+    print("Fixed Schedule Baseline Policy Evaluation")
     print("=" * 60 + "\n")
     
-    # 创建环境
+    # Create environment
     config_path = "../../config.yaml"
     env = PlantCareEnv(config_path=config_path)
     
-    # 创建策略
+    # Create policy
     policy = FixedSchedulePolicy(config_path=config_path)
     
-    print("策略配置：")
-    print(f"  浇水时间: {policy.water_times}")
-    print(f"  浇水量: {policy.water_amount} ml")
-    print(f"  灯光时间: {policy.lamp_schedule[0]}:00 - {policy.lamp_schedule[1]}:00")
+    print("Policy configuration:")
+    print(f"  Water times: {policy.water_times}")
+    print(f"  Water amount: {policy.water_amount} ml")
+    print(f"  Lamp schedule: {policy.lamp_schedule[0]}:00 - {policy.lamp_schedule[1]}:00")
     print()
     
-    # 评估策略
-    print("开始评估（5个episodes，每个30天）...\n")
+    # Evaluate policy
+    print("Starting evaluation (5 episodes, 30 days each)...\n")
     summary, results = evaluate_policy(policy, env, n_episodes=5, seed=42)
     
-    # 打印结果
+    # Print results
     print("\n" + "=" * 60)
-    print("评估结果（均值 ± 标准差）")
+    print("Evaluation Results (mean ± std)")
     print("=" * 60)
-    print(f"平均健康度: {summary['avg_health_mean']:.1f} ± {summary['avg_health_std']:.1f}")
-    print(f"最终健康度: {summary['final_health_mean']:.1f}")
-    print(f"总用水量: {summary['total_water_mean']:.1f} ml")
-    print(f"总能耗: {summary['total_energy_mean']:.1f} Wh")
-    print(f"约束违规: {summary['violations_mean']:.1f} 小时")
-    print(f"资源效率: {summary['efficiency_mean']:.3f}")
+    print(f"Average health: {summary['avg_health_mean']:.1f} ± {summary['avg_health_std']:.1f}")
+    print(f"Final health: {summary['final_health_mean']:.1f}")
+    print(f"Total water: {summary['total_water_mean']:.1f} ml")
+    print(f"Total energy: {summary['total_energy_mean']:.1f} Wh")
+    print(f"Violations: {summary['violations_mean']:.1f} hours")
+    print(f"Resource efficiency: {summary['efficiency_mean']:.3f}")
     print("=" * 60)
-

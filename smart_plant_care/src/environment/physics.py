@@ -1,6 +1,6 @@
 """
-植物生长物理模型
-包括：土壤水分动力学、光合作用、健康度计算
+Plant Growth Physics Model
+Includes: Soil moisture dynamics, photosynthesis, health calculation
 """
 
 import numpy as np
@@ -8,23 +8,23 @@ from typing import Dict, Tuple
 
 
 class PlantPhysics:
-    """植物物理模拟器 - 基于真实植物生理学"""
+    """Plant Physics Simulator - Based on real plant physiology"""
     
     def __init__(self, config: Dict):
         """
-        初始化物理模型参数
+        Initialize physics model parameters
         
         Args:
-            config: 配置字典，包含所有物理参数
+            config: Configuration dictionary containing all physics parameters
         """
         self.config = config
         
-        # 提取关键参数
+        # Extract key parameters
         self.soil_capacity = config['environment']['soil']['capacity']
         self.evap_base = config['environment']['soil']['evaporation_rate']
         self.temp_evap_coeff = config['environment']['soil']['temp_evap_coeff']
         
-        # 植物最优范围
+        # Plant optimal ranges
         self.optimal_moisture = (
             config['environment']['plant']['optimal_moisture_min'],
             config['environment']['plant']['optimal_moisture_max']
@@ -40,39 +40,39 @@ class PlantPhysics:
         water_added: float,  # ml
         temperature: float,
         light_level: float,
-        dt: float = 1.0  # 时间步长（小时）
+        dt: float = 1.0  # Time step (hours)
     ) -> float:
         """
-        更新土壤湿度（考虑蒸发和浇水）
+        Update soil moisture (considering evaporation and watering)
         
-        蒸发模型：E = base_rate * (1 + temp_coeff * T) * (1 + 0.0005 * light)
-        吸收模型：moisture += water / soil_capacity
+        Evaporation model: E = base_rate * (1 + temp_coeff * T) * (1 + 0.0005 * light)
+        Absorption model: moisture += water / soil_capacity
         
         Args:
-            current_moisture: 当前土壤湿度 [0, 1]
-            water_added: 添加的水量（ml）
-            temperature: 当前温度（°C）
-            light_level: 当前光照强度（lux）
-            dt: 时间步长（小时）
+            current_moisture: Current soil moisture [0, 1]
+            water_added: Amount of water added (ml)
+            temperature: Current temperature (°C)
+            light_level: Current light intensity (lux)
+            dt: Time step (hours)
             
         Returns:
-            新的土壤湿度 [0, 1]
+            New soil moisture [0, 1]
         """
-        # 蒸发：温度越高、光照越强，蒸发越快
+        # Evaporation: higher temp and light = faster evaporation
         evaporation_rate = self.evap_base * (
             1 + self.temp_evap_coeff * (temperature - 20)
         ) * (1 + 0.0005 * light_level)
         
-        # 蒸发量（取决于当前湿度，湿度越高蒸发越快）
+        # Evaporation amount (depends on current moisture)
         evaporation = evaporation_rate * current_moisture * dt
         
-        # 浇水增加湿度（归一化到[0, 1]）
-        water_absorption = water_added / (self.soil_capacity * 1000)  # 假设容量1L = 1000ml
+        # Watering increases moisture (normalized to [0, 1])
+        water_absorption = water_added / (self.soil_capacity * 1000)  # Assume capacity 1L = 1000ml
         
-        # 更新湿度
+        # Update moisture
         new_moisture = current_moisture - evaporation + water_absorption
         
-        # 限制在[0, 1]范围
+        # Clip to [0, 1] range
         return np.clip(new_moisture, 0.0, 1.0)
     
     def calculate_photosynthesis(
@@ -82,35 +82,35 @@ class PlantPhysics:
         temperature: float
     ) -> float:
         """
-        计算光合作用效率（影响植物生长）
+        Calculate photosynthesis efficiency (affects plant growth)
         
-        使用Michaelis-Menten动力学模型：
+        Using Michaelis-Menten kinetics model:
         P = P_max * (L / (K_L + L)) * water_factor * temp_factor
         
         Args:
-            light_level: 光照强度（lux）
-            moisture: 土壤湿度 [0, 1]
-            temperature: 温度（°C）
+            light_level: Light intensity (lux)
+            moisture: Soil moisture [0, 1]
+            temperature: Temperature (°C)
             
         Returns:
-            光合作用效率 [0, 1]
+            Photosynthesis efficiency [0, 1]
         """
-        # 光照响应曲线（饱和曲线）
-        K_light = 300  # 半饱和常数
+        # Light response curve (saturation curve)
+        K_light = 300  # Half-saturation constant
         light_factor = light_level / (K_light + light_level)
         
-        # 水分限制因子（低于阈值线性下降）
+        # Water limitation factor (linear decrease below threshold)
         if moisture > 0.3:
             water_factor = 1.0
         else:
             water_factor = moisture / 0.3
             
-        # 温度响应曲线（抛物线，最优在23°C）
+        # Temperature response curve (parabolic, optimal at 23°C)
         optimal_temp = 23.0
         temp_deviation = abs(temperature - optimal_temp)
         temp_factor = np.exp(-0.01 * temp_deviation**2)
         
-        # 总光合作用效率
+        # Total photosynthesis efficiency
         photosynthesis = light_factor * water_factor * temp_factor
         
         return np.clip(photosynthesis, 0.0, 1.0)
@@ -121,26 +121,26 @@ class PlantPhysics:
         temperature: float
     ) -> float:
         """
-        计算植物压力水平（基于偏离最优条件的程度）
+        Calculate plant stress level (based on deviation from optimal conditions)
         
         Args:
-            moisture: 土壤湿度 [0, 1]
-            temperature: 温度（°C）
+            moisture: Soil moisture [0, 1]
+            temperature: Temperature (°C)
             
         Returns:
-            压力水平 [0, 1]，0表示无压力
+            Stress level [0, 1], 0 means no stress
         """
-        # 水分压力
+        # Moisture stress
         if self.optimal_moisture[0] <= moisture <= self.optimal_moisture[1]:
             moisture_stress = 0.0
         else:
-            # 偏离最优范围的程度
+            # Degree of deviation from optimal range
             if moisture < self.optimal_moisture[0]:
                 moisture_stress = (self.optimal_moisture[0] - moisture) / self.optimal_moisture[0]
             else:
                 moisture_stress = (moisture - self.optimal_moisture[1]) / (1.0 - self.optimal_moisture[1])
         
-        # 温度压力
+        # Temperature stress
         if self.optimal_temp[0] <= temperature <= self.optimal_temp[1]:
             temp_stress = 0.0
         else:
@@ -149,7 +149,7 @@ class PlantPhysics:
             else:
                 temp_stress = (temperature - self.optimal_temp[1]) / (40 - self.optimal_temp[1])
         
-        # 总压力（取最大值，因为任何一个极端都会造成压力）
+        # Total stress (take max, any extreme causes stress)
         total_stress = max(moisture_stress, temp_stress)
         
         return np.clip(total_stress, 0.0, 1.0)
@@ -159,35 +159,35 @@ class PlantPhysics:
         current_health: float,
         photosynthesis: float,
         stress: float,
-        dt: float = 1.0  # 时间步长（小时）
+        dt: float = 1.0  # Time step (hours)
     ) -> float:
         """
-        更新植物健康度
+        Update plant health
         
-        健康度变化 = 光合作用增益 - 压力衰减
+        Health change = Photosynthesis gain - Stress decay
         
         Args:
-            current_health: 当前健康度 [0, 100]
-            photosynthesis: 光合作用效率 [0, 1]
-            stress: 压力水平 [0, 1]
-            dt: 时间步长（小时）
+            current_health: Current health [0, 100]
+            photosynthesis: Photosynthesis efficiency [0, 1]
+            stress: Stress level [0, 1]
+            dt: Time step (hours)
             
         Returns:
-            新的健康度 [0, 100]
+            New health [0, 100]
         """
-        # 健康度增益（来自光合作用）
-        health_gain = photosynthesis * 0.5 * dt  # 每小时最多增加0.5
+        # Health gain (from photosynthesis)
+        health_gain = photosynthesis * 0.5 * dt  # Max +0.5 per hour
         
-        # 健康度衰减（来自压力）
-        health_decay = stress * 1.0 * dt  # 压力下每小时最多减少1.0
+        # Health decay (from stress)
+        health_decay = stress * 1.0 * dt  # Max -1.0 per hour under stress
         
-        # 自然衰减（维持代谢）
+        # Natural decay (maintenance metabolism)
         natural_decay = 0.05 * dt
         
-        # 更新健康度
+        # Update health
         new_health = current_health + health_gain - health_decay - natural_decay
         
-        # 限制在[0, 100]范围
+        # Clip to [0, 100] range
         return np.clip(new_health, 0.0, 100.0)
     
     def get_ambient_conditions(
@@ -196,30 +196,30 @@ class PlantPhysics:
         weather_scenario: str = "normal"
     ) -> Tuple[float, float]:
         """
-        获取环境条件（温度、光照）
+        Get environmental conditions (temperature, light)
         
         Args:
-            hour_of_day: 一天中的小时数 [0, 23]
-            weather_scenario: 天气场景 ("normal", "hot_dry", "cloudy")
+            hour_of_day: Hour of day [0, 23]
+            weather_scenario: Weather scenario ("normal", "hot_dry", "cloudy")
             
         Returns:
-            (temperature, ambient_light) 温度（°C）和环境光照（lux）
+            (temperature, ambient_light) Temperature (°C) and ambient light (lux)
         """
-        # 基础昼夜温度变化（正弦波）
+        # Base day-night temperature variation (sine wave)
         temp_mean = self.config['environment']['weather']['temp_mean']
         temp_amplitude = self.config['environment']['weather']['temp_day_night_diff'] / 2
         temperature = temp_mean + temp_amplitude * np.sin(2 * np.pi * (hour_of_day - 6) / 24)
         
-        # 基础昼夜光照变化（白天高，晚上低）
+        # Base day-night light variation (high during day, low at night)
         light_max = self.config['environment']['weather']['light_max']
         if 6 <= hour_of_day <= 18:
-            # 白天：正弦曲线，中午最强
+            # Daytime: sine curve, strongest at noon
             ambient_light = light_max * np.sin(np.pi * (hour_of_day - 6) / 12)
         else:
-            # 晚上：接近0
+            # Nighttime: near 0
             ambient_light = 0.0
         
-        # 应用天气场景修正
+        # Apply weather scenario adjustments
         if weather_scenario == "hot_dry":
             temperature += 5.0
             ambient_light *= 1.2
@@ -227,7 +227,7 @@ class PlantPhysics:
             temperature -= 2.0
             ambient_light *= 0.6
             
-        # 添加随机噪声（模拟天气波动）
+        # Add random noise (simulate weather fluctuations)
         temperature += np.random.normal(0, 1.0)
         ambient_light = max(0, ambient_light + np.random.normal(0, 50))
         
@@ -235,7 +235,7 @@ class PlantPhysics:
 
 
 if __name__ == "__main__":
-    # 简单测试
+    # Simple test
     import yaml
     
     with open("../../config.yaml", "r") as f:
@@ -243,35 +243,34 @@ if __name__ == "__main__":
     
     physics = PlantPhysics(config)
     
-    print("=== 植物物理模型测试 ===\n")
+    print("=== Plant Physics Model Test ===\n")
     
-    # 测试场景：正常一天
+    # Test scenario: normal day
     moisture = 0.5
     health = 80.0
     
-    print("初始状态：")
-    print(f"  土壤湿度: {moisture:.2%}")
-    print(f"  植物健康: {health:.1f}/100\n")
+    print("Initial state:")
+    print(f"  Soil moisture: {moisture:.2%}")
+    print(f"  Plant health: {health:.1f}/100\n")
     
     for hour in range(24):
         temp, light = physics.get_ambient_conditions(hour)
         
-        # 早上8点浇水50ml
+        # Water 50ml at 8am
         water_added = 50 if hour == 8 else 0
         
-        # 更新土壤湿度
+        # Update soil moisture
         moisture = physics.update_soil_moisture(moisture, water_added, temp, light)
         
-        # 计算光合作用和压力
+        # Calculate photosynthesis and stress
         photosynthesis = physics.calculate_photosynthesis(light, moisture, temp)
         stress = physics.calculate_stress(moisture, temp)
         
-        # 更新健康度
+        # Update health
         health = physics.update_plant_health(health, photosynthesis, stress)
         
-        if hour % 6 == 0:  # 每6小时打印一次
+        if hour % 6 == 0:  # Print every 6 hours
             print(f"Hour {hour:2d}: Temp={temp:.1f}°C, Light={light:.0f}lux, "
                   f"Moisture={moisture:.2%}, Health={health:.1f}")
     
-    print(f"\n24小时后最终健康度: {health:.1f}/100")
-
+    print(f"\nFinal health after 24 hours: {health:.1f}/100")

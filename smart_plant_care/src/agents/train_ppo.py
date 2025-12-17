@@ -1,6 +1,6 @@
 """
-PPO智能体训练脚本
-使用Stable-Baselines3库
+PPO Agent Training Script
+Using Stable-Baselines3 library
 """
 
 import os
@@ -28,55 +28,55 @@ def train_ppo_agent(
     seed: int = 42
 ):
     """
-    训练PPO智能体
+    Train PPO agent
     
     Args:
-        config_path: 配置文件路径
-        total_timesteps: 总训练步数
-        device: 设备 ("auto", "cuda", "cpu")
-        save_path: 模型保存路径
-        log_path: 日志保存路径
-        seed: 随机种子
+        config_path: Configuration file path
+        total_timesteps: Total training steps
+        device: Device ("auto", "cuda", "cpu")
+        save_path: Model save path
+        log_path: Log save path
+        seed: Random seed
     """
-    # 加载配置
+    # Load configuration
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     
-    # 创建保存目录
+    # Create save directories
     os.makedirs(save_path, exist_ok=True)
     os.makedirs(log_path, exist_ok=True)
     
-    # 检查GPU可用性
+    # Check GPU availability
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
     
     print("=" * 60)
-    print("智能植物护理 - PPO训练")
+    print("Smart Plant Care - PPO Training")
     print("=" * 60)
-    print(f"设备: {device}")
+    print(f"Device: {device}")
     if device == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(0)}")
-        print(f"CUDA版本: {torch.version.cuda}")
-    print(f"总训练步数: {total_timesteps:,}")
-    print(f"随机种子: {seed}")
+        print(f"CUDA version: {torch.version.cuda}")
+    print(f"Total timesteps: {total_timesteps:,}")
+    print(f"Random seed: {seed}")
     print("=" * 60 + "\n")
     
-    # 创建向量化环境（并行训练）
-    print("创建训练环境...")
-    n_envs = 4  # 4个并行环境
+    # Create vectorized environment (parallel training)
+    print("Creating training environment...")
+    n_envs = 4  # 4 parallel environments
     env = make_vec_env(
         lambda: PlantCareEnv(config_path=config_path),
         n_envs=n_envs,
         seed=seed
     )
     
-    # 创建评估环境
+    # Create evaluation environment
     eval_env = PlantCareEnv(config_path=config_path)
     
-    # 配置PPO参数
+    # Configure PPO parameters
     ppo_config = config['ppo']
     
-    print("初始化PPO智能体...")
+    print("Initializing PPO agent...")
     model = PPO(
         policy="MlpPolicy",
         env=env,
@@ -102,10 +102,10 @@ def train_ppo_agent(
         tensorboard_log=log_path
     )
     
-    # 配置回调
-    print("配置训练回调...")
+    # Configure callbacks
+    print("Configuring training callbacks...")
     
-    # 评估回调（每10k步评估一次）
+    # Evaluation callback (evaluate every 10k steps)
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=save_path,
@@ -116,17 +116,17 @@ def train_ppo_agent(
         render=False
     )
     
-    # 检查点回调（每50k步保存一次）
+    # Checkpoint callback (save every 50k steps)
     checkpoint_callback = CheckpointCallback(
-        save_freq=50_000 // n_envs,  # 除以环境数量
+        save_freq=50_000 // n_envs,  # Divide by number of environments
         save_path=save_path,
         name_prefix="ppo_checkpoint"
     )
     
     callbacks = [eval_callback, checkpoint_callback]
     
-    # 开始训练
-    print("\n开始训练...\n")
+    # Start training
+    print("\nStarting training...\n")
     print("=" * 60)
     
     import time
@@ -139,23 +139,23 @@ def train_ppo_agent(
             progress_bar=True
         )
     except KeyboardInterrupt:
-        print("\n训练被用户中断")
+        print("\nTraining interrupted by user")
     
     elapsed_time = time.time() - start_time
     
-    # 保存最终模型
+    # Save final model
     final_model_path = os.path.join(save_path, "ppo_final_model")
     model.save(final_model_path)
     
     print("\n" + "=" * 60)
-    print("训练完成!")
+    print("Training complete!")
     print("=" * 60)
-    print(f"训练时长: {elapsed_time / 3600:.2f} 小时")
-    print(f"最终模型保存于: {final_model_path}.zip")
-    print(f"最佳模型保存于: {os.path.join(save_path, 'best_model.zip')}")
+    print(f"Training duration: {elapsed_time / 3600:.2f} hours")
+    print(f"Final model saved at: {final_model_path}.zip")
+    print(f"Best model saved at: {os.path.join(save_path, 'best_model.zip')}")
     print("=" * 60)
     
-    # 清理
+    # Cleanup
     env.close()
     eval_env.close()
     
@@ -164,25 +164,25 @@ def train_ppo_agent(
 
 def test_trained_model(model_path: str, config_path: str = "config.yaml", n_episodes: int = 5):
     """
-    测试训练好的模型
+    Test trained model
     
     Args:
-        model_path: 模型文件路径（.zip）
-        config_path: 配置文件路径
-        n_episodes: 测试episode数量
+        model_path: Model file path (.zip)
+        config_path: Configuration file path
+        n_episodes: Number of test episodes
     """
     print("=" * 60)
-    print("测试训练好的PPO模型")
+    print("Testing trained PPO model")
     print("=" * 60 + "\n")
     
-    # 加载模型
-    print(f"加载模型: {model_path}")
+    # Load model
+    print(f"Loading model: {model_path}")
     model = PPO.load(model_path)
     
-    # 创建环境
+    # Create environment
     env = PlantCareEnv(config_path=config_path)
     
-    # 测试
+    # Test
     results = {
         'avg_health': [],
         'total_water': [],
@@ -210,34 +210,34 @@ def test_trained_model(model_path: str, config_path: str = "config.yaml", n_epis
               f"Water={info['total_water_used']:.1f}ml, Reward={total_reward:.2f}")
     
     print("\n" + "=" * 60)
-    print("测试结果")
+    print("Test Results")
     print("=" * 60)
-    print(f"平均健康度: {np.mean(results['avg_health']):.1f} ± {np.std(results['avg_health']):.1f}")
-    print(f"平均用水量: {np.mean(results['total_water']):.1f} ml")
-    print(f"平均能耗: {np.mean(results['total_energy']):.1f} Wh")
-    print(f"平均违规: {np.mean(results['violations']):.1f} 小时")
+    print(f"Average health: {np.mean(results['avg_health']):.1f} ± {np.std(results['avg_health']):.1f}")
+    print(f"Average water usage: {np.mean(results['total_water']):.1f} ml")
+    print(f"Average energy usage: {np.mean(results['total_energy']):.1f} Wh")
+    print(f"Average violations: {np.mean(results['violations']):.1f} hours")
     print("=" * 60)
     
     env.close()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="训练PPO智能体用于植物护理")
-    parser.add_argument("--config", type=str, default="../../config.yaml", help="配置文件路径")
-    parser.add_argument("--timesteps", type=int, default=1_000_000, help="总训练步数")
-    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cuda", "cpu"], help="训练设备")
-    parser.add_argument("--save_path", type=str, default="../../models/", help="模型保存路径")
-    parser.add_argument("--log_path", type=str, default="../../logs/", help="日志保存路径")
-    parser.add_argument("--seed", type=int, default=42, help="随机种子")
-    parser.add_argument("--test", type=str, default=None, help="测试模型路径")
+    parser = argparse.ArgumentParser(description="Train PPO agent for plant care")
+    parser.add_argument("--config", type=str, default="../../config.yaml", help="Configuration file path")
+    parser.add_argument("--timesteps", type=int, default=1_000_000, help="Total training steps")
+    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cuda", "cpu"], help="Training device")
+    parser.add_argument("--save_path", type=str, default="../../models/", help="Model save path")
+    parser.add_argument("--log_path", type=str, default="../../logs/", help="Log save path")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument("--test", type=str, default=None, help="Test model path")
     
     args = parser.parse_args()
     
     if args.test:
-        # 测试模式
+        # Test mode
         test_trained_model(args.test, args.config)
     else:
-        # 训练模式
+        # Training mode
         train_ppo_agent(
             config_path=args.config,
             total_timesteps=args.timesteps,
@@ -246,4 +246,3 @@ if __name__ == "__main__":
             log_path=args.log_path,
             seed=args.seed
         )
-
