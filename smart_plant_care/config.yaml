@@ -1,12 +1,12 @@
-# Smart Plant Care System - 配置文件
+# Smart Plant Care System - Configuration File
 
-# 环境参数
+# Environment Parameters
 environment:
   name: "PlantCareEnv-v0"
-  timestep_hours: 1  # 每个时间步代表1小时
-  episode_days: 30   # 每个episode模拟30天
+  timestep_hours: 1  # Each timestep represents 1 hour
+  episode_days: 30   # Each episode simulates 30 days
   
-  # 植物物理参数
+  # Plant Physics Parameters
   plant:
     initial_health: 80.0
     health_min: 0.0
@@ -16,90 +16,90 @@ environment:
     optimal_temp_min: 18.0     # °C
     optimal_temp_max: 28.0     # °C
     
-  # 土壤参数
+  # Soil Parameters
   soil:
-    capacity: 1.0  # 最大含水量（归一化）
+    capacity: 1.0  # Max water capacity (normalized)
     initial_moisture: 0.5
-    evaporation_rate: 0.03  # 基础蒸发率（每小时）
-    temp_evap_coeff: 0.002  # 温度对蒸发的影响
+    evaporation_rate: 0.03  # Base evaporation rate (per hour)
+    temp_evap_coeff: 0.002  # Temperature effect on evaporation
     
-  # 环境条件
+  # Weather Conditions
   weather:
     temp_mean: 22.0
     temp_std: 3.0
     temp_day_night_diff: 5.0
     light_max: 1000  # lux
     
-  # 动作空间
+  # Action Space
   actions:
     water_max: 100  # ml
     lamp_power: 500  # watts
 
-# PPO智能体参数
+# PPO Agent Parameters
 ppo:
   learning_rate: 0.0003
-  n_steps: 2048      # 每次更新收集的步数
+  n_steps: 2048      # Steps collected per update
   batch_size: 64
-  n_epochs: 10       # 每次更新的优化轮数
-  gamma: 0.99        # 折扣因子
-  gae_lambda: 0.95   # GAE参数
-  clip_range: 0.2    # PPO裁剪范围
-  ent_coef: 0.01     # 熵系数（鼓励探索）
-  vf_coef: 0.5       # 价值函数系数
-  max_grad_norm: 0.5 # 梯度裁剪
+  n_epochs: 10       # Optimization epochs per update
+  gamma: 0.99        # Discount factor
+  gae_lambda: 0.95   # GAE parameter
+  clip_range: 0.2    # PPO clipping range
+  ent_coef: 0.01     # Entropy coefficient (encourages exploration)
+  vf_coef: 0.5       # Value function coefficient
+  max_grad_norm: 0.5 # Gradient clipping
   
-  # 网络架构
+  # Network Architecture
   policy_network:
-    net_arch: [256, 256]  # 两层，每层256神经元
+    net_arch: [256, 256]  # Two layers, 256 neurons each
     activation: "tanh"
     
   value_network:
     net_arch: [256, 256]
     activation: "tanh"
 
-# 训练参数
+# Training Parameters
 training:
-  total_timesteps: 5_000_000  # 总训练步数（GPU下约3小时）
-  eval_freq: 10_000           # 每10k步评估一次
-  save_freq: 50_000           # 每50k步保存模型
-  n_eval_episodes: 10         # 每次评估运行10个episode
+  total_timesteps: 5_000_000  # Total training steps (~3 hours on GPU)
+  eval_freq: 10_000           # Evaluate every 10k steps
+  save_freq: 50_000           # Save model every 50k steps
+  n_eval_episodes: 10         # Run 10 episodes per evaluation
   device: "auto"              # "auto" | "cuda" | "cpu"
   seed: 42
   
-  # 多场景训练（域随机化）
+  # Domain Randomization
   domain_randomization:
     enabled: true
-    temp_range: [15, 35]      # 温度范围变化
-    evap_multiplier: [0.7, 1.3]  # 蒸发率倍数
-    sensor_noise_std: 0.05    # 传感器噪声标准差
+    temp_range: [15, 35]      # Temperature range variation
+    evap_multiplier: [0.7, 1.3]  # Evaporation rate multiplier
+    sensor_noise_std: 0.05    # Sensor noise std dev
 
-# 奖励函数权重
+# Reward Function Weights
 reward:
-  alpha: 1.0      # 健康度增益权重
-  beta: 0.01      # 用水惩罚权重（每ml）
-  gamma: 0.001    # 能耗惩罚权重（每watt-hour）
-  delta: 0.5      # 约束违规惩罚权重（每小时）
+  alpha: 1.0      # Health gain weight
+  beta: 0.01      # Water penalty weight (per ml)
+  gamma: 0.001    # Energy penalty weight (per watt-hour)
+  delta: 0.5      # Constraint violation penalty (per hour)
   
-  # 约束定义
+  # Constraint Definitions
   constraints:
-    moisture_min: 0.2   # 土壤湿度不能低于20%
-    moisture_max: 0.9   # 土壤湿度不能高于90%
-    temp_min: 15.0      # 温度不能低于15°C
-    temp_max: 32.0      # 温度不能高于32°C
+    moisture_min: 0.2   # Soil moisture cannot be below 20%
+    moisture_max: 0.9   # Soil moisture cannot exceed 90%
+    temp_min: 15.0      # Temperature cannot be below 15°C
+    temp_max: 32.0      # Temperature cannot exceed 32°C
 
-# 基线策略参数
+# Baseline Policy Parameters
 baselines:
   fixed_schedule:
-    water_times: [8, 20]     # 每天8点和20点浇水
+    water_times: [8, 20]     # Water at 8am and 8pm daily
     water_amount: 50         # ml
-    lamp_schedule: [6, 22]   # 灯光6点开，22点关
+    lamp_schedule: [6, 22]   # Lamp on at 6am, off at 10pm
     
   threshold_rule:
-    moisture_threshold: 0.3  # 低于30%时浇水
+    moisture_threshold: 0.3  # Water when below 30%
     water_amount: 50
-    light_threshold: 200     # 低于200 lux时开灯
+    light_threshold: 200     # Turn on lamp when below 200 lux
 
-# 评估和可视化
+# Evaluation and Visualization
 evaluation:
   test_scenarios:
     - name: "normal"
@@ -122,21 +122,21 @@ evaluation:
     - "violation_hours"
     - "efficiency_score"
 
-# 日志和输出
+# Logging and Output
 logging:
   tensorboard_log: "./logs/tensorboard/"
   save_path: "./models/"
   video_folder: "./videos/"
   verbose: 1
   
-  # 进度报告
+  # Progress Reporting
   progress_bar: true
-  log_interval: 10  # 每10次更新记录一次
+  log_interval: 10  # Log every 10 updates
 
-# GPU优化
+# GPU Optimization
 gpu:
   enabled: true
   device_id: 0
   cudnn_benchmark: true
-  mixed_precision: false  # 混合精度训练（实验性）
+  mixed_precision: false  # Mixed precision training (experimental)
 

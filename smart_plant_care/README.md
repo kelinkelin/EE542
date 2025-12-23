@@ -2,23 +2,73 @@
 
 ## Project Overview
 
-A deep reinforcement learning-based intelligent plant care system that optimizes irrigation and lighting strategies through autonomous learning, addressing the 50% water waste problem caused by traditional fixed schedules.
+An intelligent plant care system using **Reinforcement Learning (RL)** to optimize irrigation and lighting strategies. The agent learns through trial-and-error interaction with a plant growth simulator, maximizing long-term plant health while minimizing resource consumption.
 
 ### Core Value Proposition
 
-- **Problem**: Traditional irrigation systems waste 50% of water resources, 40% of household plants die within the first year
+- **Problem**: Traditional irrigation systems waste 50% of water resources
 - **Solution**: Use PPO reinforcement learning algorithm to learn adaptive care strategies
-- **Goal**: Improve plant health to 95%+, while optimizing resource efficiency
+- **Goal**: Achieve 95%+ plant health with optimal resource efficiency
 
-## Technical Approach
+## Reinforcement Learning Framework
 
-### Category 1: Advanced Reinforcement Learning
+### RL Loop (Core of This Project)
 
-- **Algorithm**: Proximal Policy Optimization (PPO)
-- **Environment**: Custom plant growth physics simulator
-- **State Space**: [soil_moisture, temperature, light_level, time_of_day, plant_health]
-- **Action Space**: {water_amount: 0-100ml, lamp: ON/OFF}
-- **Reward Function**: R = α·Δhealth - β·water_used - γ·energy_used - δ·violations
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    RL Training Loop                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   ┌───────────┐    action     ┌─────────────────┐          │
+│   │   Agent   │──────────────▶│   Environment   │          │
+│   │   (PPO)   │               │ (Plant Simulator)│          │
+│   └───────────┘               └─────────────────┘          │
+│         ▲                            │                      │
+│         │      state, reward         │                      │
+│         └────────────────────────────┘                      │
+│                                                             │
+│   Agent observes state → selects action → receives reward   │
+│   → updates policy to maximize cumulative reward            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why This is Reinforcement Learning (Not Supervised Learning)
+
+| Aspect | Supervised Learning | Our RL Approach |
+|--------|--------------------|-----------------|
+| Data | Pre-labeled dataset | No labels, learns from interaction |
+| Learning | Minimize prediction error | Maximize cumulative reward |
+| Feedback | Immediate correct answer | Delayed reward signal |
+| Exploration | None | Agent explores action space |
+
+### PPO Algorithm (Proximal Policy Optimization)
+
+PPO is a **policy gradient** method that:
+1. Collects trajectories by interacting with environment
+2. Computes advantage estimates (GAE)
+3. Updates policy using clipped objective to prevent large updates
+4. Key hyperparameters: `clip_range=0.2`, `gae_lambda=0.95`
+
+### State-Action-Reward Design
+
+**State Space (6-dim observation):**
+- `soil_moisture`: Current soil moisture [0, 1]
+- `temperature`: Ambient temperature [0, 50]°C
+- `light_level`: Light intensity [0, 2000] lux
+- `hour_of_day`: Time of day [0, 23]
+- `plant_health`: Current health [0, 100]
+- `hours_since_water`: Hours since last watering [0, 24]
+
+**Action Space (2-dim continuous):**
+- `water_amount`: Water to dispense [0, 100] ml
+- `lamp_on`: Lamp switch [0, 1]
+
+**Reward Function:**
+```
+R = α·Δhealth - β·water_used - γ·energy_used - δ·violations
+```
+- Positive reward for health improvement
+- Penalties for resource consumption and constraint violations
 
 ### GPU Acceleration
 
